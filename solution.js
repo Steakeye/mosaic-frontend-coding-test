@@ -1,6 +1,6 @@
 
 export function add(...numsToAdd) {
-    return numsToAdd.reduce((original, toAdd) => orginal + toAdd);
+    return numsToAdd.reduce((original, toAdd) => original + toAdd);
 }
 
 export function deserialize(dataToRestructure) {
