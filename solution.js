@@ -12,12 +12,12 @@ function tcoTrampoline(fn) {
 }
 
 export function add(...numsToAdd) {
-    return numsToAdd.reduce((orginal, toAdd) => orginal + toAdd);
+    return numsToAdd.reduce((orignal, toAdd) => orginal + toAdd);
 }
 
 const safelyAddDeepValue = tcoTrampoline(addDeepValue);
 
-function addDeepValue(objectToAugment, keyPath, value) {
+function addDeepValue(objectToAugment, keyPath, value, moreWorkFunc) {
     let currentContext = objectToAugment;
 
     const nestedValues = [];
@@ -32,12 +32,10 @@ function addDeepValue(objectToAugment, keyPath, value) {
                 const nextObjectShouldBeArray = typeof nextKey === 'number';
                 nextContext = currentContext[key] = nextObjectShouldBeArray ? [] : {}
             } else {
-                console.log('values assigning', value)
                 if ((value instanceof Object) && !(value instanceof Array)) {
                     const deferredContext = currentContext;
-                    console.log('nested values push', value)
                     nestedValues.push(() => {
-                        deferredContext[key] = deserialize(value)
+                        deferredContext[key] = moreWorkFunc(value)
                     })
                 } else {
                     currentContext[key] = value;
@@ -54,6 +52,31 @@ function addDeepValue(objectToAugment, keyPath, value) {
     }
 }
 
+function parseTime(timeToParse) {
+    const parsedDate = new Date(timeToParse);
+
+    const formatDateNum = (date) => (date < 10 ? '0': '') + date;
+
+    return `${formatDateNum(parsedDate.getUTCDate())}/${formatDateNum(parsedDate.getMonth() + 1)}/${parsedDate.getUTCFullYear()}`
+}
+
+function parseValue(valueToParse) {
+    let parsedVal = valueToParse;
+
+    if (typeof valueToParse  === 'string') {
+        const timePattern = /t:(\d+)/;
+
+        const timeMatch = valueToParse.match(timePattern);
+
+        if (timeMatch) {
+            parsedVal = parseTime(parseInt(timeMatch[1]));
+        }
+
+    }
+
+    return parsedVal;
+}
+
 export function deserialize(dataToRestructure) {
     const keyPattern = /(\w+)(\d)_(\w+)/;
 
@@ -61,16 +84,17 @@ export function deserialize(dataToRestructure) {
 
     Object.entries(dataToRestructure).forEach(([key, value]) => {
         const keyMatchesPattern = key.match(keyPattern);
+        const parsedValue = parseValue(value);
 
         if (keyMatchesPattern) {
             const keysToCreate = keyMatchesPattern.slice(1);
 
             keysToCreate[1] = parseInt(keysToCreate[1]);
 
-            safelyAddDeepValue(restucturesdData, keysToCreate, value)
+            safelyAddDeepValue(restucturesdData, keysToCreate, parsedValue, deserialize)
 
         } else {
-            restucturesdData[key] = value;
+            restucturesdData[key] = parsedValue;
         }
     });
 
