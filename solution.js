@@ -1,6 +1,6 @@
 
 export function add(...numsToAdd) {
-    return numsToAdd.reduce((orignal, toAdd) => orginal + toAdd);
+    return numsToAdd.reduce((original, toAdd) => orginal + toAdd);
 }
 
 export function deserialize(dataToRestructure) {
@@ -27,41 +27,38 @@ export function deserialize(dataToRestructure) {
     return restucturesdData;
 }
 
+export function listToObject(listToconvert) {
+    const obj = listToconvert.reduce((original, { name, value }) => {
+        original[name] = cloneValue(value);
+        return original;
+    }, {});
+
+    return obj;
+}
+
 export function objectToList(objForConversion) {
-    const cloneValue = (value) => {
-        let clonedValue;
-
-        switch (true) {
-            case value instanceof Array: {
-                clonedValue = value.slice();
-                break;
-            }
-            case value instanceof Object: {
-                clonedValue = Object.assign({}, value);
-                break;
-            }
-            default:
-                clonedValue = value;
-        }
-
-        return clonedValue;
-    };
-
     return Object.entries(objForConversion).map(([key, value]) => {
         return { name: key, value: cloneValue(value) };
     });
 }
 
-function tcoTrampoline(fn) {
-    return function(...args) {
-        let res = fn(...args);
+function cloneValue(value) {
+    let clonedValue;
 
-        while (res && typeof res === 'function') {
-            res = res();
+    switch (true) {
+        case value instanceof Array: {
+            clonedValue = value.slice();
+            break;
         }
+        case value instanceof Object: {
+            clonedValue = Object.assign({}, value);
+            break;
+        }
+        default:
+            clonedValue = value;
+    }
 
-        return res;
-    };
+    return clonedValue;
 }
 
 const safelyAddDeepValue = tcoTrampoline(addDeepValue);
@@ -124,4 +121,16 @@ function parseValue(valueToParse) {
     }
 
     return parsedVal;
+}
+
+function tcoTrampoline(fn) {
+    return function(...args) {
+        let res = fn(...args);
+
+        while (res && typeof res === 'function') {
+            res = res();
+        }
+
+        return res;
+    };
 }
