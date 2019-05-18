@@ -1,10 +1,27 @@
 
+function tcoTrampoline(fn) {
+    return function(...args) {
+        let res = fn(...args);
+
+        while (res && typeof res === 'function') {
+            res = res();
+        }
+
+        return res;
+    };
+}
+
 export function add(...numsToAdd) {
     return numsToAdd.reduce((orginal, toAdd) => orginal + toAdd);
 }
 
-function safelyAddDeepValue(objectToAugment, keyPath, value) {
+const safelyAddDeepValue = tcoTrampoline(addDeepValue);
+
+function addDeepValue(objectToAugment, keyPath, value) {
     let currentContext = objectToAugment;
+
+    const nestedValues = [];
+
     keyPath.forEach((key, idx)=> {
         let nextContext = currentContext[key];
 
@@ -15,11 +32,26 @@ function safelyAddDeepValue(objectToAugment, keyPath, value) {
                 const nextObjectShouldBeArray = typeof nextKey === 'number';
                 nextContext = currentContext[key] = nextObjectShouldBeArray ? [] : {}
             } else {
-                currentContext[key] = value;
+                console.log('values assigning', value)
+                if ((value instanceof Object) && !(value instanceof Array)) {
+                    const deferredContext = currentContext;
+                    console.log('nested values push', value)
+                    nestedValues.push(() => {
+                        deferredContext[key] = deserialize(value)
+                    })
+                } else {
+                    currentContext[key] = value;
+                }
             }
         }
         currentContext = nextContext
-    })
+    });
+
+    if (nestedValues.length) {
+        return () => nestedValues.forEach(f => f())
+    } else {
+        return  objectToAugment;
+    }
 }
 
 export function deserialize(dataToRestructure) {
@@ -28,10 +60,6 @@ export function deserialize(dataToRestructure) {
     const restucturesdData = {};
 
     Object.entries(dataToRestructure).forEach(([key, value]) => {
-        //console.log('log', ...arguments)
-        //console.log('keyPattern', keyPattern);
-        //console.log('key', key);
-        //console.log('key, value', key, value)
         const keyMatchesPattern = key.match(keyPattern);
 
         if (keyMatchesPattern) {
@@ -39,15 +67,12 @@ export function deserialize(dataToRestructure) {
 
             keysToCreate[1] = parseInt(keysToCreate[1]);
 
-            //console.log('keysToCreate', keysToCreate);
-            //restucturesdData[]
-            //console.log('typeof keysToCreate[1]', typeof keysToCreate[1], keysToCreate[1])
             safelyAddDeepValue(restucturesdData, keysToCreate, value)
 
         } else {
             restucturesdData[key] = value;
         }
-    })
+    });
 
     return restucturesdData;
 }
