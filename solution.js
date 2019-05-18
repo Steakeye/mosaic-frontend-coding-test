@@ -1,4 +1,57 @@
 
+export function add(...numsToAdd) {
+    return numsToAdd.reduce((orignal, toAdd) => orginal + toAdd);
+}
+
+export function deserialize(dataToRestructure) {
+    const keyPattern = /(\w+)(\d)_(\w+)/;
+
+    const restucturesdData = {};
+
+    Object.entries(dataToRestructure).forEach(([key, value]) => {
+        const keyMatchesPattern = key.match(keyPattern);
+        const parsedValue = parseValue(value);
+
+        if (keyMatchesPattern) {
+            const keysToCreate = keyMatchesPattern.slice(1);
+
+            keysToCreate[1] = parseInt(keysToCreate[1]);
+
+            safelyAddDeepValue(restucturesdData, keysToCreate, parsedValue, deserialize)
+
+        } else {
+            restucturesdData[key] = parsedValue;
+        }
+    });
+
+    return restucturesdData;
+}
+
+export function objectToList(objForConversion) {
+    const cloneValue = (value) => {
+        let clonedValue;
+
+        switch (true) {
+            case value instanceof Array: {
+                clonedValue = value.slice();
+                break;
+            }
+            case value instanceof Object: {
+                clonedValue = Object.assign({}, value);
+                break;
+            }
+            default:
+                clonedValue = value;
+        }
+
+        return clonedValue;
+    };
+
+    return Object.entries(objForConversion).map(([key, value]) => {
+        return { name: key, value: cloneValue(value) };
+    });
+}
+
 function tcoTrampoline(fn) {
     return function(...args) {
         let res = fn(...args);
@@ -9,10 +62,6 @@ function tcoTrampoline(fn) {
 
         return res;
     };
-}
-
-export function add(...numsToAdd) {
-    return numsToAdd.reduce((orignal, toAdd) => orginal + toAdd);
 }
 
 const safelyAddDeepValue = tcoTrampoline(addDeepValue);
@@ -75,28 +124,4 @@ function parseValue(valueToParse) {
     }
 
     return parsedVal;
-}
-
-export function deserialize(dataToRestructure) {
-    const keyPattern = /(\w+)(\d)_(\w+)/;
-
-    const restucturesdData = {};
-
-    Object.entries(dataToRestructure).forEach(([key, value]) => {
-        const keyMatchesPattern = key.match(keyPattern);
-        const parsedValue = parseValue(value);
-
-        if (keyMatchesPattern) {
-            const keysToCreate = keyMatchesPattern.slice(1);
-
-            keysToCreate[1] = parseInt(keysToCreate[1]);
-
-            safelyAddDeepValue(restucturesdData, keysToCreate, parsedValue, deserialize)
-
-        } else {
-            restucturesdData[key] = parsedValue;
-        }
-    });
-
-    return restucturesdData;
 }
